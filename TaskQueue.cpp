@@ -1,34 +1,62 @@
 #include "TaskQueue.h"
 #include <iostream>
+#include <functional>
 
 void TaskQueue::Enqueue(std::shared_ptr<ITask> spTask){
-    std::lock_guard<std::mutex> lock(pushmutex);
-    if(queue.size())
-    queue.push(spTask);
+    std::lock_guard<std::mutex> lock(mutex);
+    if(queue.size()<maxTaskNum){
+        queue.push(spTask);
+        con.notify_one();
+    }
 }
 
 void TaskQueue::Start(){
     std::cout<<"TaskQueue start"<<std::endl;
-    InitThread(4);
-    
+    InitThread(threadNum);
 }
 
 void TaskQueue::GetAndDoWork(){
-    std::lock_guard<std::mutex> lock(getmutex);
-    if(queue.size()>0){
-        auto spTask = queue.front();
-        queue.pop();
-        spTask->DoTask();
+    try
+    {
+        while(true){
+            if(stop) break;
+            std::unique_lock<std::mutex> lock(mutex);
+            if(queue.size()==0){
+                con.wait(lock);
+            }
+            if(stop) break;
+            auto spTask = queue.front();
+            queue.pop();
+            lock.unlock();
+            spTask->DoTask();
+        }
     }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    
 }
 
 void TaskQueue::InitThread(int num){
+    auto func = std::bind(&TaskQueue::GetAndDoWork,this);
     while(num-->0){
-        std::thread *t = new std::thread(GetAndDoWork);
-        threadlist.push_back(*t);
+        auto sp_thread = std::make_shared<std::thread>(func);
+        spthreadlist.push_back(sp_thread);
     }
+    for(const auto& thread:spthreadlist){
+        thread->join();
+    }
+    
 }
 
-TaskQueue::TaskQueue(int maxNum){
-    maxTaskNum = maxNum;
+TaskQueue::TaskQueue(int maxNum,int threadnum){
+    this->maxTaskNum = maxNum;
+    this->threadNum = threadnum;
+    stop = false;
+}
+
+void TaskQueue::Exit(){    //有些问题，结束的时候，队列还很多任务，直接退出了
+    stop = true;
+    con.notify_all();
 }

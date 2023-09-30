@@ -8,4 +8,5 @@ private:
 public:
     virtual void DoTask() = 0;
 };
+
 #endif

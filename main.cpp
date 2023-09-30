@@ -1,34 +1,41 @@
 #include <iostream>
-#include "TaskTyep1.h"
 #include <thread>
 #include "TaskQueue.h"
-#include <unistd.h>
-int main(){
+int main()
+{
 
-    TaskQueue taskQueue(7,4);
+    TaskQueue taskQueue(5, 4); // 任务队列长度为5，有4个工作线程
 
-    std::thread taskThread(   //这个线程用来启动消费者
-        [&](){
-            taskQueue.Start();
-        }
-    );
-
-    auto f = [](){
-        std::cout<<"work work~"<<std::endl;
+    auto consume = [&]()
+    {
+        taskQueue.Start();        //消费者线程
     };
-    for(int i =0;i<10;i++){
-        sleep(0.5);
-        std::shared_ptr<ITask> ptask = std::make_shared<TaskType1>(i,f);
-        taskQueue.Enqueue(ptask);
+    std::thread thread(consume);
+
+    auto f = [](int id)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::cout << "task " << id << " work work~" << std::endl;
+    };
+
+    for (int i = 0; i < 10; i++)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        taskQueue.Enqueue(f, i);
     }
 
-    sleep(10);//等一阵，让消费者都陷于阻塞，然后重新开始生产
-    for(int i =0;i<20;i++){  //差不多4,5秒队列就满了，其他的就丢了
-        sleep(0.5);
-        std::shared_ptr<ITask> ptask = std::make_shared<TaskType1>(i,f);
-        taskQueue.Enqueue(ptask);
+    std::this_thread::sleep_for(std::chrono::seconds(5)); // 等一阵，让消费者都陷于阻塞，然后重新开始生产
+    for (int i = 0; i < 20; i++)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        taskQueue.Enqueue(f,i);
     }
+
+    std::this_thread::sleep_for(std::chrono::seconds(2)); //过两秒后退出任务队列
     taskQueue.Exit();
-    taskThread.join();
+    std::cout<<"over";
+
+    thread.join();
+
     return 0;
 }

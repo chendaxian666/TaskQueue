@@ -20,14 +20,14 @@ int main()
 
     for (int i = 0; i < 10; i++)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         taskQueue.Enqueue(f, i);
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(5)); // 等一阵，让消费者都陷于阻塞，然后重新开始生产
     for (int i = 0; i < 20; i++)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         taskQueue.Enqueue(f,i);
     }
 

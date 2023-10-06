@@ -18,16 +18,18 @@ void TaskQueue::GetAndDoWork()
             if (stop)
                 break;
             std::unique_lock<std::mutex> lock(mutex);
-            if (tasks.size() == 0)
+            if(tasks.empty())
             {
                 con.wait(lock);
             }
             if (stop)
                 break;
-            auto task = tasks.front();
-            tasks.pop();
-            lock.unlock();
-            task();
+            if(!tasks.empty()){
+                auto task = tasks.front();
+                tasks.pop();
+                lock.unlock();
+                task();
+            }
         }
     }
     catch (const std::exception &e)

@@ -25,7 +25,7 @@ void TaskQueue::GetAndDoWork()
             if (stop)
                 break;
             if(!tasks.empty()){
-                auto task = tasks.front();
+                auto task = static_cast<const Task&>(tasks.front());
                 tasks.pop();
                 lock.unlock();
                 task();
